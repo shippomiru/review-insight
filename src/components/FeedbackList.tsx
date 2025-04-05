@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface FeedbackItem {
   feature: string;
@@ -16,6 +17,7 @@ interface FeedbackListProps {
 
 export default function FeedbackList({ items, type, platform, feedbackExamples }: FeedbackListProps) {
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
+  const { t } = useLanguage();
   
   const toggleItem = (feature: string) => {
     if (expandedItem === feature) {
@@ -35,9 +37,17 @@ export default function FeedbackList({ items, type, platform, feedbackExamples }
     // 如果没有对应的示例，返回默认消息
     if (!feedbackExamples[key]) {
       if (type === 'liked') {
-        return ['用户对这个功能表示满意', '这项功能获得了积极评价', '用户认为这个功能很实用'];
+        return [
+          t('feedback.liked.default1'),
+          t('feedback.liked.default2'),
+          t('feedback.liked.default3')
+        ];
       } else {
-        return ['用户对这个功能表示不满', '这项功能收到了一些改进建议', '用户希望这个功能能够优化'];
+        return [
+          t('feedback.disliked.default1'),
+          t('feedback.disliked.default2'),
+          t('feedback.disliked.default3')
+        ];
       }
     }
     
@@ -57,7 +67,7 @@ export default function FeedbackList({ items, type, platform, feedbackExamples }
             </span>
             <div className="flex items-center">
               <span className="mr-2 rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-800">
-                {item.votes} 票
+                {item.votes} {t('result.votes')}
               </span>
               <svg
                 className={`h-5 w-5 text-gray-500 transition-transform ${
@@ -78,7 +88,7 @@ export default function FeedbackList({ items, type, platform, feedbackExamples }
           
           {expandedItem === item.feature && (
             <div className="bg-gray-50 px-4 py-3">
-              <p className="mb-2 text-sm font-medium text-gray-700">用户反馈示例：</p>
+              <p className="mb-2 text-sm font-medium text-gray-700">{t('result.feedback_examples')}</p>
               <ul className="space-y-2">
                 {getRandomExamples().map((example, index) => (
                   <li key={index} className="rounded-md bg-white p-3 text-sm text-gray-600 shadow-sm">

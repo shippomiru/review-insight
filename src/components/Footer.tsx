@@ -1,68 +1,73 @@
+'use client';
+
 import Link from 'next/link';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function Footer() {
+  const { t } = useLanguage();
+  
   return (
     <footer className="bg-gray-50">
       <div className="container py-12">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">反馈分析</h3>
+            <h3 className="text-lg font-semibold text-gray-900">{t('site.name')}</h3>
             <p className="mt-4 text-sm text-gray-600">
-              获取应用用户评价洞察，了解用户最喜欢和最不满意的功能。
+              {t('hero.description')}
             </p>
           </div>
           <div>
-            <h4 className="text-base font-medium text-gray-900">快速链接</h4>
+            <h4 className="text-base font-medium text-gray-900">{t('footer.links')}</h4>
             <ul className="mt-4 space-y-2">
               <li>
                 <Link href="/#features" className="text-sm text-gray-600 hover:text-primary-600">
-                  功能特点
+                  {t('nav.features')}
                 </Link>
               </li>
               <li>
                 <Link href="/#how-it-works" className="text-sm text-gray-600 hover:text-primary-600">
-                  使用流程
+                  {t('nav.how_it_works')}
                 </Link>
               </li>
               <li>
                 <Link href="/#pricing" className="text-sm text-gray-600 hover:text-primary-600">
-                  价格方案
+                  {t('nav.pricing')}
                 </Link>
               </li>
             </ul>
           </div>
           <div>
-            <h4 className="text-base font-medium text-gray-900">支持</h4>
+            <h4 className="text-base font-medium text-gray-900">{t('footer.support')}</h4>
             <ul className="mt-4 space-y-2">
               <li>
                 <Link href="/#faq" className="text-sm text-gray-600 hover:text-primary-600">
-                  常见问题
+                  {t('nav.faq')}
                 </Link>
               </li>
               <li>
                 <Link href="/privacy" className="text-sm text-gray-600 hover:text-primary-600">
-                  隐私政策
+                  {t('footer.privacy')}
                 </Link>
               </li>
               <li>
                 <Link href="/terms" className="text-sm text-gray-600 hover:text-primary-600">
-                  使用条款
+                  {t('footer.terms')}
                 </Link>
               </li>
             </ul>
           </div>
           <div>
-            <h4 className="text-base font-medium text-gray-900">联系我们</h4>
+            <h4 className="text-base font-medium text-gray-900">{t('footer.contact')}</h4>
             <ul className="mt-4 space-y-2">
               <li className="text-sm text-gray-600">
-                邮箱: contact@example.com
+                {t('footer.contact.email')}
               </li>
             </ul>
           </div>
         </div>
         <div className="mt-12 border-t border-gray-200 pt-6">
           <p className="text-center text-xs text-gray-500">
-            © {new Date().getFullYear()} 反馈分析. 数据来源于应用商店，版权归平台和用户所有。
+            {t('footer.copyright', { year: new Date().getFullYear().toString(), siteName: t('site.name') })}
           </p>
         </div>
       </div>
