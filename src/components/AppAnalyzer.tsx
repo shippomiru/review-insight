@@ -105,35 +105,11 @@ export default function AppAnalyzer() {
             <h2 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
               {t('result.title', { appName: data.appInfo.title })}
             </h2>
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-6">
-              <div className="text-center">
-                <p className="text-sm text-gray-600">{t('result.date_range')}</p>
-                <p className="text-base font-medium">{formatDateRange()}</p>
-              </div>
-              
-              <div className="text-center">
-                <p className="text-sm text-gray-600">{t('result.reviews_count')}</p>
-                <p className="text-base font-medium">
-                  {reviewCount.toLocaleString()} 
-                  {language === 'zh' ? t('result.reviews_unit') : ` ${t('result.reviews_unit')}`}
-                </p>
-              </div>
-              
-              <div className="text-center">
-                <p className="text-sm text-gray-600">{t('result.app_rating')}</p>
-                <p className="text-base font-medium">⭐ {data.appInfo.score.toFixed(1)}</p>
-              </div>
-              
-              <div className="text-center">
-                <p className="text-sm text-gray-600">{t('result.country')}</p>
-                <p className="text-base font-medium">{getCountryName(country, language)}</p>
-              </div>
-            </div>
           </div>
           
           {data.appStore && (
             <div>
-              <div className="mb-6 flex items-center">
+              <div className="mb-6 flex items-center justify-between">
                 <div className="flex items-center">
                   <div className="h-8 w-8 rounded-full bg-blue-100 p-1.5 text-blue-600">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -141,6 +117,21 @@ export default function AppAnalyzer() {
                     </svg>
                   </div>
                   <h3 className="ml-2 text-xl font-semibold text-gray-900">{t('result.app_store_analysis')}</h3>
+                </div>
+                
+                <div className="flex gap-6 items-center">
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600">{t('result.reviews_count')}</p>
+                    <p className="text-base font-medium">
+                      {reviewCount.toLocaleString()} 
+                      {language === 'zh' ? t('result.reviews_unit') : ` ${t('result.reviews_unit')}`}
+                    </p>
+                  </div>
+                  
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600">{t('result.app_rating')}</p>
+                    <p className="text-base font-medium">⭐ {data.appInfo.score.toFixed(1)}</p>
+                  </div>
                 </div>
               </div>
               
