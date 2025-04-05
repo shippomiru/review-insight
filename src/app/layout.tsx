@@ -1,7 +1,6 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { LanguageProvider } from '@/contexts/LanguageContext';
-import Header from '@/components/Header';
 
 export const metadata: Metadata = {
   title: '用户反馈趋势分析 - 了解应用评价洞察',
@@ -18,7 +17,6 @@ export default function RootLayout({
     <html lang="zh-CN">
       <body>
         <LanguageProvider>
-          <Header />
           {children}
         </LanguageProvider>
       </body>

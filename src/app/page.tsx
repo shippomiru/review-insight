@@ -1,6 +1,7 @@
 'use client';
 
 import Footer from '@/components/Footer';
+import Header from '@/components/Header';
 import Link from 'next/link';
 import Image from 'next/image';
 import AppAnalyzer from '@/components/AppAnalyzer';
@@ -11,6 +12,7 @@ export default function Home() {
   
   return (
     <main>
+      <Header />
       {/* Hero Section */}
       <section className="relative bg-white" id="hero">
         <div className="container py-16">

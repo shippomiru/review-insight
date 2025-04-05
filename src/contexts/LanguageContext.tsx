@@ -49,10 +49,14 @@ const translations = {
     'result.reviews_unit': '条',
     'result.google_play': 'Google Play 分析',
     'result.app_store': 'App Store 分析',
+    'result.app_store_analysis': 'App Store 评价分析',
+    'result.app_rating': '平均评分',
+    'result.country': '地区',
     'result.likes': '用户喜欢的功能',
     'result.dislikes': '用户不满意的功能',
     'result.votes': '票',
     'result.feedback_examples': '用户反馈示例：',
+    'result.no_appstore_data': '未能获取App Store数据，请尝试其他应用',
     
     // Features Section
     'features.title': '功能特点',
@@ -153,7 +157,7 @@ const translations = {
   },
   en: {
     // Header
-    'site.name': 'Review Analysis',
+    'site.name': 'Review Analyzer',
     'nav.features': 'Features',
     'nav.how_it_works': 'How It Works',
     'nav.testimonials': 'Testimonials',
@@ -161,32 +165,36 @@ const translations = {
     'nav.faq': 'FAQ',
     
     // Hero
-    'hero.title1': 'Understand User Voice',
+    'hero.title1': 'Gain Insights from User Voices',
     'hero.title2': 'Improve App Experience',
-    'hero.description': 'Analyze user reviews from App Store and Google Play to discover features users love and hate, gain valuable insights to drive product decisions.',
+    'hero.description': 'Analyze App Store and Google Play reviews to discover what users love and dislike about your app, get valuable feedback insights, and make informed product decisions.',
     
     // App Analyzer
     'search.label': 'App Name',
     'search.placeholder': 'e.g., WeChat, Facebook, TikTok',
-    'search.button': 'Start Analysis',
+    'search.button': 'Analyze',
     'search.analyzing': 'Analyzing...',
     'search.error.empty': 'Please enter an app name',
     'search.error.general': 'An error occurred during analysis, please try again later',
     'search.progress': 'Analysis Progress',
-    'search.getting_data': 'Fetching data from app stores...',
-    'search.wait_message': 'Analysis usually takes 3-5 minutes, please be patient...',
+    'search.getting_data': 'Retrieving data from app stores...',
+    'search.wait_message': 'Analysis typically takes 3-5 minutes, please be patient...',
     
     // Analysis Result
     'result.title': '{appName} Review Analysis',
-    'result.date_range': 'Date Range',
+    'result.date_range': 'Analysis Time Range',
     'result.reviews_count': 'Reviews Analyzed',
     'result.reviews_unit': 'reviews',
     'result.google_play': 'Google Play Analysis',
     'result.app_store': 'App Store Analysis',
+    'result.app_store_analysis': 'App Store Review Analysis',
+    'result.app_rating': 'Average Rating',
+    'result.country': 'Region',
     'result.likes': 'Features Users Like',
     'result.dislikes': 'Features Users Dislike',
     'result.votes': 'votes',
     'result.feedback_examples': 'User Feedback Examples:',
+    'result.no_appstore_data': 'Unable to retrieve App Store data, please try another app',
     
     // Features Section
     'features.title': 'Features',
