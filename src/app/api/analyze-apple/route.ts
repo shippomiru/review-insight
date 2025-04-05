@@ -874,11 +874,11 @@ ${language === 'zh' ? `示例中文输出格式:
             liked: deepseekContent['用户喜欢的功能'].map((item: any) => ({
               feature: item['功能名称'],
               votes: item['提及次数']
-            })),
+            })).sort((a: Feature, b: Feature) => b.votes - a.votes),
             disliked: deepseekContent['用户不喜欢的功能'].map((item: any) => ({
               feature: item['问题名称'],
               votes: item['提及次数']
-            })),
+            })).sort((a: Feature, b: Feature) => b.votes - a.votes),
             customReviewExamples
           };
         }
@@ -899,11 +899,11 @@ ${language === 'zh' ? `示例中文输出格式:
             liked: deepseekContent.featuresLiked.map((item: any) => ({
               feature: item.featureName,
               votes: item.mentionCount
-            })),
+            })).sort((a: Feature, b: Feature) => b.votes - a.votes),
             disliked: deepseekContent.featuresDisliked.map((item: any) => ({
               feature: item.issueName,
               votes: item.mentionCount
-            })),
+            })).sort((a: Feature, b: Feature) => b.votes - a.votes),
             customReviewExamples
           };
         }
@@ -1247,7 +1247,7 @@ const getAppStoreData = async (appName: string, language: Language, country: str
 // 分页获取所有评论，兼顾性能和API限制
 async function fetchAllReviews(appStore: any, appId: string, country: string) {
   const allReviews = [];
-  const maxPages = 4; // 最多获取4页，每页约50条，总共约200条评论
+  const maxPages = 2; // 最多获取2页，每页约50条，总共约100条评论
   
   // 准备随机的请求头选项
   const headers = {
