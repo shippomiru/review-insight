@@ -618,8 +618,7 @@ const extractFeatures = async (
       };
     })
     .filter((review): review is {text: string; score: number; version: string} => review !== null)
-    // 移除50条限制，使用所有清洗后的有效评论
-    //.slice(0, 50); // 限制数量避免API成本过高
+    .slice(0, 50); // 限制为最多50条评论
   
   console.log(`准备使用API分析 ${validReviews.length} 条有效评论，从 ${reviews.length} 条原始评论中提取`);
   
@@ -634,8 +633,7 @@ const extractFeatures = async (
     // 检查是否配置了API密钥环境变量
     const apiKey = process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.DEEPSEEK_API_KEY;
     if (!apiKey) {
-      console.log('未配置API密钥环境变量，使用备选方案');
-      return fallbackFeatureExtraction(reviews, language);
+      throw new Error('未配置API密钥环境变量，无法继续分析');
     }
     
     console.log('使用大模型API进行评论分析');
@@ -835,9 +833,9 @@ ${language === 'zh' ? `示例中文输出格式:
       console.log('开始调用DeepSeek API...');
       
       try {
-        // 设置30秒超时的AbortController
+        // 设置20秒超时的AbortController
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        const timeoutId = setTimeout(() => controller.abort(), 20000);
         
         const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
           method: 'POST',
@@ -848,7 +846,7 @@ ${language === 'zh' ? `示例中文输出格式:
           body: JSON.stringify({
             model: "deepseek-ai/DeepSeek-V3",
             messages: [{ role: "user", content: customPrompt }],
-            temperature: 0.3,
+            temperature: 0.2,
             max_tokens: 1500,
             response_format: { type: "json_object" },
             stream: true
@@ -998,76 +996,21 @@ ${language === 'zh' ? `示例中文输出格式:
     }
   } catch (error) {
     console.error('使用API分析评论失败:', error);
-    console.log('回退到本地分析方法');
-    
-    // 如果API调用失败，回退到本地分析方法
-    return fallbackFeatureExtraction(reviews, language);
+    // 直接抛出错误，不使用备选方案
+    throw new Error(`API分析失败: ${(error as Error).message}`);
   }
 };
 
 // 备选的特性提取方法，使用本地分析逻辑
+// 由于要求不使用备选方案，此函数将不再被调用，但保留函数本身以避免代码结构变化
 function fallbackFeatureExtraction(
   reviews: any[],
   language: Language
 ): { liked: Feature[]; disliked: Feature[] } {
   console.log('使用本地分析方法提取功能特性');
   
-  // 初始化功能计数器
-  const featureCounts: Record<string, { positive: number; negative: number }> = {};
-  Object.keys({...featureKeywords, ...chineseFeatureKeywords}).forEach((feature) => {
-    featureCounts[feature] = { positive: 0, negative: 0 };
-  });
-  
-  // 有效评论计数
-  let validReviewCount = 0;
-  
-  // 分析每条评论
-  for (const review of reviews) {
-    // 清洗评论
-    const cleanedText = cleanReview(review.text || '', language);
-    if (!cleanedText) continue;
-    
-    validReviewCount++;
-    
-    // 分析情感
-    const sentimentResult = analyzeSentiment(cleanedText, language);
-    const isPositive = review.score >= 4 || sentimentResult.comparative > 0;
-    
-    // 提取关键功能
-    const keyFeatures = extractKeyFeatures(cleanedText, language);
-    
-    // 统计功能
-    keyFeatures.forEach(feature => {
-      if (isPositive) {
-        featureCounts[feature].positive += 1;
-      } else {
-        featureCounts[feature].negative += 1;
-      }
-    });
-  }
-  
-  console.log(`本地分析完成: 分析了 ${validReviewCount} 条有效评论，从 ${reviews.length} 条原始评论中提取`);
-  
-  // 构建结果
-  const liked = Object.entries(featureCounts)
-    .filter(([_, counts]) => counts.positive > 0)
-    .map(([feature, counts]) => ({
-      feature,
-      votes: counts.positive,
-    }))
-    .sort((a, b) => b.votes - a.votes)
-    .slice(0, 5);
-  
-  const disliked = Object.entries(featureCounts)
-    .filter(([_, counts]) => counts.negative > 0)
-    .map(([feature, counts]) => ({
-      feature,
-      votes: counts.negative,
-    }))
-    .sort((a, b) => b.votes - a.votes)
-    .slice(0, 5);
-  
-  return { liked, disliked };
+  // 由于这个方法不会被调用，所以简化实现
+  return { liked: [], disliked: [] };
 }
 
 // 生成评论替代文本，避免直接使用用户评论
@@ -1170,8 +1113,8 @@ const extractReviewExamples = (
              (featureType === 'liked' ? isPositive : !isPositive);
     });
     
-    // 从相关评论中选择最多3条
-    const selectedReviews = relevantReviews.slice(0, 3);
+    // 从相关评论中选择最多2条
+    const selectedReviews = relevantReviews.slice(0, 2);
     
     // 为每条评论生成替代文本
     examples[key] = selectedReviews.map(review => 
@@ -1320,7 +1263,7 @@ const getAppStoreData = async (appName: string, language: Language, country: str
 // 分页获取所有评论，兼顾性能和API限制
 async function fetchAllReviews(appStore: any, appId: string, country: string) {
   const allReviews = [];
-  const maxPages = 2; // 最多获取2页，每页约50条，总共约100条评论
+  const maxPages = 1; // 最多获取1页，每页约50条评论
   
   // 准备随机的请求头选项
   const headers = {
@@ -1391,9 +1334,9 @@ async function fetchAllReviews(appStore: any, appId: string, country: string) {
         break;
       }
       
-      // 如果获取的评论达到了200条，也提前结束
-      if (allReviews.length >= 200) {
-        console.log('已获取200条评论，达到预定上限，停止获取');
+      // 如果获取的评论达到了50条，也提前结束
+      if (allReviews.length >= 50) {
+        console.log('已获取50条评论，达到预定上限，停止获取');
         break;
       }
       
@@ -1418,7 +1361,7 @@ async function fetchAllReviews(appStore: any, appId: string, country: string) {
   
   console.log(`评论获取完成，共 ${allReviews.length} 条，已按时间降序排序`);
   
-  return allReviews;
+  return allReviews.slice(0, 50); // 确保最多返回50条评论
 }
 
 // 生成模拟App Store数据
@@ -1538,38 +1481,44 @@ export async function POST(request: Request) {
       );
     }
     
-    try {
-      // 尝试获取真实数据
-      console.log('尝试获取真实App Store数据');
-      const data = await getAppStoreData(appName, language || 'en', country || 'us');
-      console.log('成功获取真实App Store数据');
-      
-      // 记录处理时间
-      const processingTime = Date.now() - startTime;
-      console.log(`请求处理完成，耗时: ${processingTime}ms`);
-      
-      return NextResponse.json(data);
-    } catch (error) {
-      // 如果失败，尝试使用模拟数据
-      console.error('获取真实App Store数据失败:', error);
-      
+    // 创建一个响应控制器
+    const encoder = new TextEncoder();
+    const stream = new TransformStream();
+    const writer = stream.writable.getWriter();
+    
+    // 启动获取数据的异步过程，但不等待其完成
+    (async () => {
       try {
-        console.log('回退到模拟数据...');
-        const mockData = await generateMockAppStoreData(appName, language || 'en');
+        // 尝试获取真实数据
+        console.log('尝试获取真实App Store数据');
+        const data = await getAppStoreData(appName, language || 'en', country || 'us');
+        console.log('成功获取真实App Store数据');
         
         // 记录处理时间
         const processingTime = Date.now() - startTime;
-        console.log(`模拟数据生成完成，耗时: ${processingTime}ms`);
+        console.log(`请求处理完成，耗时: ${processingTime}ms`);
         
-        return NextResponse.json(mockData);
-      } catch (mockError) {
-        console.error('模拟数据生成失败:', mockError);
-        return new NextResponse(
-          JSON.stringify({ error: (error as Error).message || '无法获取应用数据' }),
-          { status: 404 }
-        );
+        // 将结果写入流
+        await writer.write(encoder.encode(JSON.stringify(data)));
+      } catch (error) {
+        console.error('获取真实App Store数据失败:', error);
+        
+        // 不使用模拟数据，直接返回错误信息
+        await writer.write(encoder.encode(JSON.stringify({
+          error: (error as Error).message || '无法获取应用数据'
+        })));
+      } finally {
+        await writer.close();
       }
-    }
+    })().catch(console.error);
+    
+    // 立即返回流式响应，不等待数据处理完成
+    return new Response(stream.readable, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Transfer-Encoding': 'chunked'
+      }
+    });
   } catch (error) {
     console.error('App Store API路由错误:', error);
     return new NextResponse(
