@@ -759,8 +759,8 @@ Please return only the JSON data without any other explanatory text.
       console.log('Anthropic API分析完成');
     }
     else if (process.env.DEEPSEEK_API_KEY) {
-      // 使用Deepseek API通过SiliconFlow调用
-      
+      // 使用Deepseek API通过SiliconFlow调用，支持流式响应
+
       // 使用提供的自定义提示词模板
       const outputLanguage = language === 'zh' ? '中文' : 'English';
       const customPrompt = `你是一位专业的应用评论分析专家。我需要你分析以下应用评论，提取关键信息，并生成一份结构化的分析报告，用于网页展示。
@@ -831,162 +831,158 @@ ${language === 'zh' ? `示例中文输出格式:
 }`}
 
 请确保分析全面且客观，只返回JSON格式的结果，不要包含其他说明文字。`;
-      
-      const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: "deepseek-ai/DeepSeek-V3", // 使用DeepSeek-V3模型
-          messages: [{ role: "user", content: customPrompt }],
-          temperature: 0.3,
-          max_tokens: 2000,
-          response_format: { type: "json_object" },
-          stream: true // 启用流式响应
-        })
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Deepseek API请求失败: ${response.status} ${errorText}`);
-      }
-      
-      // 初始化流式响应变量
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error('无法获取响应流');
-      }
-      
-      // 处理流式响应
-      let responseText = '';
-      let jsonResult: any = null;
+
+      console.log('开始调用DeepSeek API...');
       
       try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          
-          // 解码二进制数据为文本
-          const chunk = new TextDecoder().decode(value);
-          responseText += chunk;
-          
-          // 尝试从流中提取完整的JSON
-          if (responseText.includes('\n\n')) {
-            const lines = responseText.split('\n\n');
-            for (const line of lines) {
-              if (line.startsWith('data: ') && line.includes('"content"')) {
-                const data = line.replace('data: ', '');
-                try {
-                  const parsed = JSON.parse(data);
-                  if (parsed.choices && parsed.choices[0] && parsed.choices[0].message && parsed.choices[0].message.content) {
-                    // 尝试解析返回的内容为JSON
-                    try {
-                      jsonResult = JSON.parse(parsed.choices[0].message.content);
-                      console.log('成功解析流式响应JSON');
-                      break;
-                    } catch (e) {
-                      // 内容尚未完整，继续等待
-                    }
-                  }
-                } catch (e) {
-                  // 不是有效的JSON，继续等待
-                }
+        // 设置30秒超时的AbortController
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        
+        const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: "deepseek-ai/DeepSeek-V3",
+            messages: [{ role: "user", content: customPrompt }],
+            temperature: 0.3,
+            max_tokens: 1500,
+            response_format: { type: "json_object" },
+            stream: true
+          }),
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Deepseek API请求失败: ${response.status} ${errorText}`);
+        }
+        
+        // 读取流式响应
+        const reader = response.body?.getReader();
+        if (!reader) {
+          throw new Error('无法获取响应流');
+        }
+        
+        let responseText = '';
+        
+        // 设置一个内部缓冲区，完整收集所有的事件
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            // 解码并追加到响应文本
+            const chunk = new TextDecoder().decode(value);
+            responseText += chunk;
+          }
+        } finally {
+          reader.releaseLock();
+        }
+        
+        // 完整流读取完毕后，解析JSON结果
+        console.log('流式响应完成，开始处理结果');
+        
+        // 从完整的responseText中提取JSON内容
+        let jsonString = '';
+        const matches = responseText.match(/data: ({.+?})\n\n/g);
+        if (matches && matches.length > 0) {
+          // 获取最后一个完整的数据块
+          const lastCompleteData = matches[matches.length - 1].replace('data: ', '').trim();
+          const parsed = JSON.parse(lastCompleteData);
+          if (parsed.choices && parsed.choices[0] && parsed.choices[0].message) {
+            jsonString = parsed.choices[0].message.content;
+          }
+        } else if (responseText.includes('content')) {
+          // 尝试其他方式提取
+          const parts = responseText.split('content');
+          for (let i = parts.length - 1; i >= 0; i--) {
+            const part = parts[i];
+            if (part.includes('{') && part.includes('}')) {
+              const jsonStart = part.indexOf('{');
+              const jsonEnd = part.lastIndexOf('}') + 1;
+              if (jsonStart >= 0 && jsonEnd > jsonStart) {
+                jsonString = part.substring(jsonStart, jsonEnd);
+                break;
               }
             }
+          }
+        }
+        
+        if (!jsonString) {
+          throw new Error('无法从响应中提取JSON结果');
+        }
+        
+        // 解析提取的JSON字符串
+        const deepseekContent = JSON.parse(jsonString);
+        
+        // 将Deepseek分析结果转换为原有格式
+        if (language === 'zh') {
+          // 中文输出格式转换
+          if (deepseekContent['用户喜欢的功能'] && deepseekContent['用户不喜欢的功能']) {
+            const customReviewExamples: Record<string, string[]> = {};
             
-            // 如果已经成功解析了JSON，可以提前退出循环
-            if (jsonResult) break;
+            deepseekContent['用户喜欢的功能'].forEach((item: any) => {
+              customReviewExamples[`appstore_liked_${item['功能名称']}`] = item['评论示例'] || [];
+            });
+            
+            deepseekContent['用户不喜欢的功能'].forEach((item: any) => {
+              customReviewExamples[`appstore_disliked_${item['问题名称']}`] = item['评论示例'] || [];
+            });
+            
+            analysisResult = {
+              liked: deepseekContent['用户喜欢的功能'].map((item: any) => ({
+                feature: item['功能名称'],
+                votes: item['提及次数']
+              })).sort((a: Feature, b: Feature) => b.votes - a.votes),
+              disliked: deepseekContent['用户不喜欢的功能'].map((item: any) => ({
+                feature: item['问题名称'],
+                votes: item['提及次数']
+              })).sort((a: Feature, b: Feature) => b.votes - a.votes),
+              customReviewExamples
+            };
+          } else {
+            throw new Error('DeepSeek返回的JSON格式不符合预期');
+          }
+        } else {
+          // 英文输出格式转换
+          if (deepseekContent.featuresLiked && deepseekContent.featuresDisliked) {
+            const customReviewExamples: Record<string, string[]> = {};
+            
+            deepseekContent.featuresLiked.forEach((item: any) => {
+              customReviewExamples[`appstore_liked_${item.featureName}`] = item.reviewExamples || [];
+            });
+            
+            deepseekContent.featuresDisliked.forEach((item: any) => {
+              customReviewExamples[`appstore_disliked_${item.issueName}`] = item.reviewExamples || [];
+            });
+            
+            analysisResult = {
+              liked: deepseekContent.featuresLiked.map((item: any) => ({
+                feature: item.featureName,
+                votes: item.mentionCount
+              })).sort((a: Feature, b: Feature) => b.votes - a.votes),
+              disliked: deepseekContent.featuresDisliked.map((item: any) => ({
+                feature: item.issueName,
+                votes: item.mentionCount
+              })).sort((a: Feature, b: Feature) => b.votes - a.votes),
+              customReviewExamples
+            };
+          } else {
+            throw new Error('DeepSeek返回的JSON格式不符合预期');
           }
         }
+        
+        console.log('Deepseek API分析完成');
       } catch (error) {
-        console.error('读取流式响应时出错:', error);
-        throw error;
-      } finally {
-        reader.releaseLock();
+        console.error('Deepseek API调用失败:', error);
+        throw error; // 不使用备用分析，而是直接抛出错误
       }
-      
-      // 如果流式响应没有返回有效结果，尝试从完整的响应文本解析
-      if (!jsonResult) {
-        try {
-          // 尝试从最后一个data:块中提取内容
-          const dataBlocks = responseText.split('data: ').filter(block => block.trim());
-          const lastDataBlock = dataBlocks[dataBlocks.length - 1];
-          
-          if (lastDataBlock) {
-            const parsed = JSON.parse(lastDataBlock);
-            if (parsed.choices && parsed.choices[0] && parsed.choices[0].message) {
-              jsonResult = JSON.parse(parsed.choices[0].message.content);
-            }
-          }
-        } catch (e) {
-          console.error('无法从流式响应中解析JSON:', e);
-          throw new Error('无法从流式响应中解析结果');
-        }
-      }
-      
-      if (!jsonResult) {
-        throw new Error('流式响应未返回有效JSON结果');
-      }
-      
-      // 将解析后的结果转换为原来的格式
-      const deepseekContent = jsonResult;
-      
-      // 将Deepseek分析结果转换为原有格式
-      if (language === 'zh') {
-        // 中文输出格式转换
-        if (deepseekContent['用户喜欢的功能'] && deepseekContent['用户不喜欢的功能']) {
-          const customReviewExamples: Record<string, string[]> = {};
-          
-          deepseekContent['用户喜欢的功能'].forEach((item: any) => {
-            customReviewExamples[`appstore_liked_${item['功能名称']}`] = item['评论示例'] || [];
-          });
-          
-          deepseekContent['用户不喜欢的功能'].forEach((item: any) => {
-            customReviewExamples[`appstore_disliked_${item['问题名称']}`] = item['评论示例'] || [];
-          });
-          
-          analysisResult = {
-            liked: deepseekContent['用户喜欢的功能'].map((item: any) => ({
-              feature: item['功能名称'],
-              votes: item['提及次数']
-            })).sort((a: Feature, b: Feature) => b.votes - a.votes),
-            disliked: deepseekContent['用户不喜欢的功能'].map((item: any) => ({
-              feature: item['问题名称'],
-              votes: item['提及次数']
-            })).sort((a: Feature, b: Feature) => b.votes - a.votes),
-            customReviewExamples
-          };
-        }
-      } else {
-        // 英文输出格式转换
-        if (deepseekContent.featuresLiked && deepseekContent.featuresDisliked) {
-          const customReviewExamples: Record<string, string[]> = {};
-          
-          deepseekContent.featuresLiked.forEach((item: any) => {
-            customReviewExamples[`appstore_liked_${item.featureName}`] = item.reviewExamples || [];
-          });
-          
-          deepseekContent.featuresDisliked.forEach((item: any) => {
-            customReviewExamples[`appstore_disliked_${item.issueName}`] = item.reviewExamples || [];
-          });
-          
-          analysisResult = {
-            liked: deepseekContent.featuresLiked.map((item: any) => ({
-              feature: item.featureName,
-              votes: item.mentionCount
-            })).sort((a: Feature, b: Feature) => b.votes - a.votes),
-            disliked: deepseekContent.featuresDisliked.map((item: any) => ({
-              feature: item.issueName,
-              votes: item.mentionCount
-            })).sort((a: Feature, b: Feature) => b.votes - a.votes),
-            customReviewExamples
-          };
-        }
-      }
-      
-      console.log('Deepseek API分析完成');
     }
     
     // 验证API返回的结果格式
