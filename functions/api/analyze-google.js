@@ -1,3 +1,9 @@
+// 在文件顶部添加兼容性标志
+export const config = {
+  compatibility_date: "2023-05-18",
+  compatibility_flags: ["nodejs_compat"],
+};
+
 /**
  * Google Play应用评论分析API
  * 与原始Next.js API保持相同的功能

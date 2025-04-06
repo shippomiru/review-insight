@@ -6,4 +6,7 @@ compatibility_flags = ["nodejs_compat"]
 command = "npm run build"
 
 [site]
-bucket = "./out" 
+bucket = "./out"
+
+# 为Cloudflare Pages添加配置
+pages_build_output_dir = "out" 

@@ -3,6 +3,12 @@
  * 与原始Next.js API保持相同的功能
  */
 
+// 在文件顶部添加兼容性标志
+export const config = {
+  compatibility_date: "2023-05-18",
+  compatibility_flags: ["nodejs_compat"],
+};
+
 // API入口点
 export async function onRequest(context) {
   const { request, env } = context;

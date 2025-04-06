@@ -2,7 +2,14 @@
  * Cloudflare Pages中间件
  * 用于处理请求并添加必要的头信息
  */
-export async function onRequest(context) {
+
+// 设置NodeJS兼容性选项
+export const config = {
+  compatibility_date: "2023-05-18",
+  compatibility_flags: ["nodejs_compat"],
+};
+
+export default async function middleware(context) {
   // 解构上下文对象
   const { request, next, env } = context;
   const url = new URL(request.url);

@@ -5,6 +5,13 @@
  * 注意：这只是一个临时解决方案，用于保持功能一致性
  * 最终应该迁移完整的API逻辑到Cloudflare Functions
  */
+
+// 设置NodeJS兼容性选项
+export const config = {
+  compatibility_date: "2023-05-18",
+  compatibility_flags: ["nodejs_compat"],
+};
+
 export async function onRequest(context) {
   const { request, env } = context;
   const url = new URL(request.url);
