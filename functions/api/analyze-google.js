@@ -1,5 +1,5 @@
 /**
- * App Store应用评论分析API
+ * Google Play应用评论分析API
  * 与原始Next.js API保持相同的功能
  */
 
@@ -199,7 +199,7 @@ function translateFeature(feature, language) {
 // 提取评论例子
 function extractReviewExamples(features, reviews, language) {
   const examples = {};
-  const prefix = 'appstore_';
+  const prefix = 'google_';
   
   // 对每个特性找最具代表性的评论
   for (const category of ['liked', 'disliked']) {
@@ -247,44 +247,54 @@ function extractReviewExamples(features, reviews, language) {
 }
 
 // 分页获取所有评论
-async function fetchAllReviews(appStore, appId, country) {
+async function fetchAllReviews(gplay, appId, language) {
   const allReviews = [];
-  let page = 0;
-  const pageSize = 100;
   const maxRetries = 3;
-  const maxPages = 10; // 限制最大页数，避免过度请求
+  const maxReviews = 1000; // 限制最大评论数
   
-  while (page < maxPages) {
+  let nextPaginationToken = null;
+  
+  while (allReviews.length < maxReviews) {
     let retries = 0;
     let success = false;
     
     while (retries < maxRetries && !success) {
       try {
-        const reviews = await appStore.reviews({
-          id: appId,
-          country,
-          page,
-          sort: appStore.sort.RECENT,
-          page_size: pageSize,
-        });
+        const options = {
+          appId: appId,
+          lang: language === 'zh' ? 'zh-CN' : 'en',
+          sort: gplay.sort.NEWEST,
+          num: 100
+        };
         
-        if (!reviews || reviews.length === 0) {
+        if (nextPaginationToken) {
+          options.nextPaginationToken = nextPaginationToken;
+        }
+        
+        const result = await gplay.reviews(options);
+        
+        if (!result || !result.data || result.data.length === 0) {
           // 没有更多评论
           break;
         }
         
-        allReviews.push(...reviews);
+        allReviews.push(...result.data);
+        nextPaginationToken = result.nextPaginationToken;
         success = true;
-        page++;
+        
+        // 如果没有下一页，结束循环
+        if (!nextPaginationToken) {
+          break;
+        }
         
         // 添加延迟，避免请求过于频繁
         await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (error) {
         retries++;
-        console.error(`获取评论失败 (页码: ${page}, 重试: ${retries}):`, error);
+        console.error(`获取Google Play评论失败 (重试: ${retries}):`, error);
         
         if (retries >= maxRetries) {
-          console.error(`达到最大重试次数，跳过页码 ${page}`);
+          console.error(`达到最大重试次数，停止获取评论`);
           break;
         }
         
@@ -293,7 +303,7 @@ async function fetchAllReviews(appStore, appId, country) {
       }
     }
     
-    if (!success) {
+    if (!success || !nextPaginationToken) {
       break;
     }
   }
@@ -301,49 +311,49 @@ async function fetchAllReviews(appStore, appId, country) {
   return allReviews;
 }
 
-// 获取App Store数据
-async function getAppStoreData(appName, language, country) {
+// 获取Google Play数据
+async function getGooglePlayData(appName, language) {
   try {
-    console.log(`尝试获取App Store数据: ${appName}, 语言: ${language}, 国家: ${country}`);
+    console.log(`尝试获取Google Play数据: ${appName}, 语言: ${language}`);
     
     // 生成缓存键
-    const cacheKey = `app_${appName}_${language}_${country}`;
+    const cacheKey = `google_${appName}_${language}`;
     
     // 检查缓存
     const cachedData = reviewsCache.get(cacheKey);
     if (cachedData) {
-      console.log(`从缓存中获取数据: ${appName}, 国家: ${country}`);
+      console.log(`从缓存中获取数据: ${appName}`);
       return cachedData;
     }
     
-    // 导入 app-store-scraper
-    const appStore = require('app-store-scraper');
+    // 导入 google-play-scraper
+    const gplay = require('google-play-scraper');
     
-    console.log('成功导入App Store Scraper库，开始搜索应用');
+    console.log('成功导入Google Play Scraper库，开始搜索应用');
     
     // 搜索应用
-    const searchResults = await appStore.search({
+    const searchResults = await gplay.search({
       term: appName,
       num: 1,
       lang: language === 'zh' ? 'zh-cn' : 'en-us',
     });
     
     if (!searchResults || !Array.isArray(searchResults) || searchResults.length === 0) {
-      throw new Error(`没有找到与"${appName}"匹配的App Store应用`);
+      throw new Error(`没有找到与"${appName}"匹配的Google Play应用`);
     }
     
     const app = searchResults[0];
-    console.log(`找到应用: ${app.title} (${app.id})`);
+    console.log(`找到应用: ${app.title} (${app.appId})`);
     
     // 获取应用详情
-    const appDetail = await appStore.app({
-      id: app.id,
+    const appDetail = await gplay.app({
+      appId: app.appId,
       lang: language === 'zh' ? 'zh-cn' : 'en-us'
     });
     
     // 分页获取所有评论
-    const allReviews = await fetchAllReviews(appStore, app.id, country);
-    console.log(`共获取到 ${allReviews.length} 条评论，国家: ${country}`);
+    const allReviews = await fetchAllReviews(gplay, app.appId, language);
+    console.log(`共获取到 ${allReviews.length} 条评论`);
     
     // 提取特性和评论示例
     console.log('开始分析评论...');
@@ -360,13 +370,13 @@ async function getAppStoreData(appName, language, country) {
         developer: app.developer,
         score: app.score,
         reviews: app.reviews || 0,
-        version: app.version,
-        releaseDate: app.released,
-        lastUpdated: app.updated,
-        appLink: `https://apps.apple.com/app/id${app.id}`,
+        version: app.version || '',
+        releaseDate: app.released || '',
+        lastUpdated: app.updated || '',
+        appLink: `https://play.google.com/store/apps/details?id=${app.appId}`,
         appIcon: app.icon
       },
-      appStore: features,
+      googlePlay: features,
       reviewExamples: reviewExamples
     };
     
@@ -377,53 +387,53 @@ async function getAppStoreData(appName, language, country) {
     return result;
     
   } catch (error) {
-    console.error('获取App Store数据失败:', error);
+    console.error('获取Google Play数据失败:', error);
     throw error;
   }
 }
 
 // 生成模拟数据
-function generateMockAppStoreData(appName) {
+function generateMockGooglePlayData(appName) {
   return {
     appInfo: {
       title: appName,
       developer: "测试开发者",
-      score: 4.5,
-      reviews: 100,
-      version: "1.0.0",
-      releaseDate: "2024-04-01",
-      lastUpdated: "2024-04-06",
-      appLink: `https://apps.apple.com/app/${appName}`,
-      appIcon: "https://is1-ssl.mzstatic.com/image/thumb/Purple126/v4/a1/b5/9b/a1b59bfa-59b6-ae1a-a069-ca3ec28eea9a/Icon-83.5@2x.png.png/200x200bb.png"
+      score: 4.2,
+      reviews: 85,
+      version: "1.2.0",
+      releaseDate: "2024-04-02",
+      lastUpdated: "2024-04-07",
+      appLink: `https://play.google.com/store/apps/details?id=com.example.${appName.toLowerCase().replace(/\s+/g, '.')}`,
+      appIcon: "https://play-lh.googleusercontent.com/dCM0CyWMQ9wWUVYw-Eck3BVzHiLbaPxGK1Y7U0572NPS574SxToU3xrHcVGvvWvmcr8=s180-rw"
     },
-    appStore: {
+    googlePlay: {
       liked: [
-        { feature: "用户界面", votes: 45 },
-        { feature: "功能性", votes: 32 },
-        { feature: "性能", votes: 25 },
-        { feature: "客户支持", votes: 18 },
-        { feature: "创新设计", votes: 15 }
+        { feature: "用户界面", votes: 38 },
+        { feature: "功能性", votes: 29 },
+        { feature: "性能", votes: 22 },
+        { feature: "客户支持", votes: 15 },
+        { feature: "创新设计", votes: 12 }
       ],
       disliked: [
-        { feature: "广告数量", votes: 22 },
-        { feature: "崩溃问题", votes: 17 },
-        { feature: "电池消耗", votes: 14 },
-        { feature: "订阅模式", votes: 12 },
-        { feature: "更新频率", votes: 8 }
+        { feature: "广告数量", votes: 20 },
+        { feature: "崩溃问题", votes: 18 },
+        { feature: "订阅模式", votes: 15 },
+        { feature: "电池消耗", votes: 12 },
+        { feature: "更新频率", votes: 7 }
       ]
     },
     reviewExamples: {
-      "appstore_liked_用户界面": ["用户界面设计简洁直观，让人一目了然", "很喜欢这个应用的界面布局，使用起来非常便捷"],
-      "appstore_liked_功能性": ["提供了我需要的所有功能，非常实用", "功能齐全且易于使用，节省了我很多时间"],
-      "appstore_liked_性能": ["运行流畅，没有任何卡顿", "即使处理大量数据也很快"],
-      "appstore_liked_客户支持": ["客服响应非常迅速，解决了我的所有问题", "遇到问题时得到了很好的支持"],
-      "appstore_liked_创新设计": ["很多创新的功能是其他应用没有的", "设计理念非常前卫"],
+      "google_liked_用户界面": ["界面设计很现代，导航简单直观", "UI很干净，一切都很容易找到"],
+      "google_liked_功能性": ["这个应用有我需要的所有功能", "功能齐全且非常实用"],
+      "google_liked_性能": ["运行非常流畅，即使在我的旧手机上", "没有任何卡顿或延迟"],
+      "google_liked_客户支持": ["客服团队回复迅速，解决了我的问题", "当我遇到问题时得到了很好的支持"],
+      "google_liked_创新设计": ["这款应用有一些非常创新的功能", "设计理念很有创意"],
       
-      "appstore_disliked_广告数量": ["广告太多了，影响使用体验", "希望能减少广告或提供无广告版本"],
-      "appstore_disliked_崩溃问题": ["使用一段时间后经常崩溃", "有时候会突然关闭，导致数据丢失"],
-      "appstore_disliked_电池消耗": ["耗电量很大，使用一会儿手机就发热", "后台运行时消耗电量过多"],
-      "appstore_disliked_订阅模式": ["价格太贵了，应该提供一次性购买选项", "订阅模式不合理，很多基本功能都需要付费"],
-      "appstore_disliked_更新频率": ["更新太慢，很多bug长时间没有修复", "希望能更频繁地推出新功能"]
+      "google_disliked_广告数量": ["广告太频繁了，打断了使用体验", "太多弹出广告，很烦人"],
+      "google_disliked_崩溃问题": ["经常崩溃，特别是在打开大文件时", "使用几分钟后就会闪退"],
+      "google_disliked_订阅模式": ["基本功能也需要订阅，太贵了", "订阅价格比同类应用高很多"],
+      "google_disliked_电池消耗": ["运行一小时就消耗15%的电量", "后台耗电严重"],
+      "google_disliked_更新频率": ["很久没有更新修复bug了", "更新太少，功能落后于竞争对手"]
     }
   };
 }
@@ -461,7 +471,7 @@ export async function onRequest(context) {
   try {
     // 解析请求体
     const body = await request.json();
-    const { appName, language, country } = body;
+    const { appName, language } = body;
     
     if (!appName) {
       return new Response(
@@ -476,11 +486,11 @@ export async function onRequest(context) {
       );
     }
     
-    console.log(`请求应用: ${appName}, 语言: ${language || 'en'}, 国家: ${country || 'us'}`);
+    console.log(`请求应用: ${appName}, 语言: ${language || 'en'}`);
     
     try {
       // 尝试获取真实数据
-      const data = await getAppStoreData(appName, language || 'en', country || 'us');
+      const data = await getGooglePlayData(appName, language || 'en');
       
       return new Response(
         JSON.stringify(data),
@@ -496,7 +506,7 @@ export async function onRequest(context) {
       console.error('获取真实数据失败:', apiError);
       
       // 使用模拟数据作为备选
-      const mockData = generateMockAppStoreData(appName);
+      const mockData = generateMockGooglePlayData(appName);
       
       return new Response(
         JSON.stringify(mockData),

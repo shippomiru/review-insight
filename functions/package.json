@@ -1,0 +1,11 @@
+{
+  "name": "review-insight-functions",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "app-store-scraper": "^0.17.0",
+    "google-play-scraper": "^10.0.1",
+    "sentiment": "^5.0.2",
+    "bad-words": "^4.0.0"
+  }
+} 
