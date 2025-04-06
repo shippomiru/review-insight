@@ -1,0 +1,9 @@
+name = "review-insight"
+compatibility_date = "2023-05-18"
+compatibility_flags = ["nodejs_compat"]
+
+[build]
+command = "npm run build"
+
+[site]
+bucket = "./out" 
