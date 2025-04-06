@@ -6,6 +6,14 @@
       "use": "@vercel/next"
     }
   ],
+  "functions": {
+    "api/analyze-apple": {
+      "maxDuration": 60
+    },
+    "api/**/*": {
+      "maxDuration": 60
+    }
+  },
   "env": {
     "NODE_ENV": "production"
   }
