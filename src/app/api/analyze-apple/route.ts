@@ -775,13 +775,13 @@ ${reviewTexts}
 
 1. 用户喜欢的功能:
    - 识别最受欢迎的5个具体功能或方面
-   - 提供每个功能的提及次数和3-5条代表性评论示例(如果不够就有多少提供多少)
+   - 提供每个功能的提及次数和最多2条代表性评论示例(如果不够就有多少提供多少)
    - 优先选择非常具体的功能，如"视觉化的时间显示"、"桌面小组件"、"自定义提醒音效"等
    - 评论示例保留原文，不要翻译
 
 2. 用户不喜欢的功能:
    - 识别最常被投诉的5个功能或问题
-   - 提供每个问题的提及次数和3-5条代表性评论示例(如果不够就有多少提供多少)
+   - 提供每个问题的提及次数和最多2条代表性评论示例(如果不够就有多少提供多少)
    - 突出显示具体、可操作的问题，如"登录页面频繁崩溃"、"通知延迟问题"等
    - 评论示例保留原文，不要翻译
 
@@ -798,7 +798,7 @@ ${language === 'zh' ? `示例中文输出格式:
     {
       "功能名称": "视觉化的时间显示",
       "提及次数": xx,
-      "评论示例": ["...", "...", "...", "...", "..."] // 原文评论，不翻译
+      "评论示例": ["...", "..."] // 原文评论，不翻译，最多2条
     },
     ...
   ],
@@ -806,7 +806,7 @@ ${language === 'zh' ? `示例中文输出格式:
     {
       "问题名称": "登录页面频繁崩溃",
       "提及次数": xx,
-      "评论示例": ["...", "...", "...", "...", "..."] // 原文评论，不翻译
+      "评论示例": ["...", "..."] // 原文评论，不翻译，最多2条
     },
     ...
   ]
@@ -816,7 +816,7 @@ ${language === 'zh' ? `示例中文输出格式:
     {
       "featureName": "Visual time display",
       "mentionCount": xx,
-      "reviewExamples": ["...", "...", "...", "...", "..."] // Original reviews, no translation
+      "reviewExamples": ["...", "..."] // Original reviews, no translation, max 2
     },
     ...
   ],
@@ -824,7 +824,7 @@ ${language === 'zh' ? `示例中文输出格式:
     {
       "issueName": "Frequent login page crashes",
       "mentionCount": xx,
-      "reviewExamples": ["...", "...", "...", "...", "..."] // Original reviews, no translation
+      "reviewExamples": ["...", "..."] // Original reviews, no translation, max 2
     },
     ...
   ]
@@ -843,7 +843,8 @@ ${language === 'zh' ? `示例中文输出格式:
           messages: [{ role: "user", content: customPrompt }],
           temperature: 0.3,
           max_tokens: 2000,
-          response_format: { type: "json_object" }
+          response_format: { type: "json_object" },
+          stream: true // 启用流式响应
         })
       });
       
@@ -852,9 +853,85 @@ ${language === 'zh' ? `示例中文输出格式:
         throw new Error(`Deepseek API请求失败: ${response.status} ${errorText}`);
       }
       
-      const result = await response.json();
-      // 解析Deepseek返回结果，适配到原有格式
-      const deepseekContent = JSON.parse(result.choices[0].message.content);
+      // 初始化流式响应变量
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('无法获取响应流');
+      }
+      
+      // 处理流式响应
+      let responseText = '';
+      let jsonResult: any = null;
+      
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          // 解码二进制数据为文本
+          const chunk = new TextDecoder().decode(value);
+          responseText += chunk;
+          
+          // 尝试从流中提取完整的JSON
+          if (responseText.includes('\n\n')) {
+            const lines = responseText.split('\n\n');
+            for (const line of lines) {
+              if (line.startsWith('data: ') && line.includes('"content"')) {
+                const data = line.replace('data: ', '');
+                try {
+                  const parsed = JSON.parse(data);
+                  if (parsed.choices && parsed.choices[0] && parsed.choices[0].message && parsed.choices[0].message.content) {
+                    // 尝试解析返回的内容为JSON
+                    try {
+                      jsonResult = JSON.parse(parsed.choices[0].message.content);
+                      console.log('成功解析流式响应JSON');
+                      break;
+                    } catch (e) {
+                      // 内容尚未完整，继续等待
+                    }
+                  }
+                } catch (e) {
+                  // 不是有效的JSON，继续等待
+                }
+              }
+            }
+            
+            // 如果已经成功解析了JSON，可以提前退出循环
+            if (jsonResult) break;
+          }
+        }
+      } catch (error) {
+        console.error('读取流式响应时出错:', error);
+        throw error;
+      } finally {
+        reader.releaseLock();
+      }
+      
+      // 如果流式响应没有返回有效结果，尝试从完整的响应文本解析
+      if (!jsonResult) {
+        try {
+          // 尝试从最后一个data:块中提取内容
+          const dataBlocks = responseText.split('data: ').filter(block => block.trim());
+          const lastDataBlock = dataBlocks[dataBlocks.length - 1];
+          
+          if (lastDataBlock) {
+            const parsed = JSON.parse(lastDataBlock);
+            if (parsed.choices && parsed.choices[0] && parsed.choices[0].message) {
+              jsonResult = JSON.parse(parsed.choices[0].message.content);
+            }
+          }
+        } catch (e) {
+          console.error('无法从流式响应中解析JSON:', e);
+          throw new Error('无法从流式响应中解析结果');
+        }
+      }
+      
+      if (!jsonResult) {
+        throw new Error('流式响应未返回有效JSON结果');
+      }
+      
+      // 将解析后的结果转换为原来的格式
+      const deepseekContent = jsonResult;
       
       // 将Deepseek分析结果转换为原有格式
       if (language === 'zh') {
