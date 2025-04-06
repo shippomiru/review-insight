@@ -16,10 +16,10 @@ export default function Home() {
       {/* Hero Section */}
       <section className="relative bg-white" id="hero">
         <div className="container py-16">
-          <div className="mx-auto max-w-3xl text-center">
-            <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl md:text-6xl">
-              <span className="block text-primary-600">{t('hero.title1')}</span>
-              <span className="block">{t('hero.title2')}</span>
+          <div className="mx-auto max-w-4xl text-center">
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl md:text-5xl lg:text-6xl">
+              <span className="inline-block text-primary-600 whitespace-nowrap md:whitespace-normal">{t('hero.title1')}</span>
+              <span className="block mt-2">{t('hero.title2')}</span>
             </h1>
             <p className="mt-6 text-lg text-gray-600">
               {t('hero.description')}

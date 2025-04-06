@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function Footer() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   
   return (
     <footer className="bg-gray-50">
@@ -61,6 +61,18 @@ export default function Footer() {
             <ul className="mt-4 space-y-2">
               <li className="text-sm text-gray-600">
                 {t('footer.contact.email')}
+              </li>
+              <li>
+                <a 
+                  href={language === 'zh' 
+                    ? "https://khwde0rk62.feishu.cn/share/base/form/shrcnHncbAgLL9oleBalnzYpNtg" 
+                    : "https://khwde0rk62.feishu.cn/share/base/form/shrcnrVLX9UmxzPNb506ymFhRrh"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-gray-600 hover:text-primary-600"
+                >
+                  {t('footer.feedback')}
+                </a>
               </li>
             </ul>
           </div>
