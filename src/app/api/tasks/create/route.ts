@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { taskManager } from '../taskManager';
+import { taskManagerKV } from '../taskManager-kv';
 
 // API路由处理函数
 export async function POST(request: Request) {
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     console.log(`创建任务: ${appName}, 语言: ${language}, 国家: ${country}`);
     
     // 创建任务并获取任务ID
-    const taskId = taskManager.createTask({
+    const taskId = await taskManagerKV.createTask({
       appName,
       language,
       country,

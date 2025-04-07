@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { taskManager } from '../taskManager';
+import { taskManagerKV } from '../taskManager-kv';
 
 export async function GET(request: Request) {
   try {
@@ -10,7 +10,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: '缺少taskId参数' }, { status: 400 });
     }
     
-    const task = taskManager.getTask(taskId);
+    const task = await taskManagerKV.getTask(taskId);
     
     if (!task) {
       return NextResponse.json({ error: '未找到指定任务' }, { status: 404 });
