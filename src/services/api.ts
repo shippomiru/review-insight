@@ -71,6 +71,17 @@ export interface AppReviewsAnalysis {
   reviewsData?: AppReview[]; // 新增字段，保存原始评论数据，用于统计评论数量
 }
 
+// 在AppReviewsAnalysis接口后添加新的任务相关接口
+export interface TaskStatus {
+  taskId: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  progress: number;
+  message: string;
+  updatedAt: number;
+  result?: AppReviewsAnalysis;
+  error?: string;
+}
+
 // API错误类
 class ApiError extends Error {
   status: number;
@@ -188,8 +199,112 @@ export const analyzeAppReviews = async (
   }
 };
 
+// 在api.ts文件末尾，添加新的任务API方法
+// 创建异步分析任务
+export const createAnalysisTask = async (
+  appName: string,
+  storeType: StoreType = 'apple',
+  language: Language = 'en',
+  country: string = 'us'
+): Promise<string> => {
+  try {
+    const response = await fetch('/api/tasks/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ appName, storeType, language, country }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new ApiError(
+        errorData.error || '创建分析任务时出错',
+        response.status
+      );
+    }
+    
+    const data = await response.json();
+    return data.taskId;
+  } catch (error) {
+    console.error('Error creating analysis task:', error);
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError('创建任务时出错，请稍后再试');
+  }
+};
+
+// 获取任务状态
+export const getTaskStatus = async (taskId: string): Promise<TaskStatus> => {
+  try {
+    const response = await fetch(`/api/tasks/status?taskId=${taskId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new ApiError(
+        errorData.error || '获取任务状态时出错',
+        response.status
+      );
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error getting task status:', error);
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError('获取任务状态时出错，请稍后再试');
+  }
+};
+
+// 轮询任务状态直到完成或失败
+export const pollTaskStatus = async (
+  taskId: string,
+  onProgress?: (status: TaskStatus) => void,
+  pollInterval: number = 2000
+): Promise<AppReviewsAnalysis> => {
+  return new Promise((resolve, reject) => {
+    const checkStatus = async () => {
+      try {
+        const status = await getTaskStatus(taskId);
+        
+        // 回调进度更新
+        if (onProgress) {
+          onProgress(status);
+        }
+        
+        if (status.status === 'completed' && status.result) {
+          resolve(status.result);
+          return;
+        } else if (status.status === 'failed') {
+          reject(new Error(status.error || '任务处理失败'));
+          return;
+        }
+        
+        // 继续轮询
+        setTimeout(checkStatus, pollInterval);
+      } catch (error) {
+        reject(error);
+      }
+    };
+    
+    // 开始轮询
+    checkStatus();
+  });
+};
+
+// 更新默认导出
 export default {
   analyzeAppReviews,
   analyzeGooglePlayAppReviews,
   analyzeAppStoreAppReviews,
+  createAnalysisTask,
+  getTaskStatus,
+  pollTaskStatus,
 }; 

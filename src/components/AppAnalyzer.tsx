@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import SearchForm from '@/components/SearchForm';
 import FeedbackList from '@/components/FeedbackList';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { analyzeAppReviews, AppReviewsAnalysis } from '@/services/api';
+import { analyzeAppReviews, createAnalysisTask, pollTaskStatus, AppReviewsAnalysis, TaskStatus } from '@/services/api';
 
 export default function AppAnalyzer() {
   const [loading, setLoading] = useState(false);
@@ -12,6 +12,8 @@ export default function AppAnalyzer() {
   const [error, setError] = useState('');
   const [country, setCountry] = useState('cn');
   const [reviewCount, setReviewCount] = useState<number>(0);
+  const [taskProgress, setTaskProgress] = useState<number>(0);
+  const [taskMessage, setTaskMessage] = useState<string>('');
   const { t, language } = useLanguage();
 
   const formatDateRange = () => {
@@ -39,18 +41,33 @@ export default function AppAnalyzer() {
     setData(null);
     setCountry(selectedCountry);
     setReviewCount(0);
+    setTaskProgress(0);
+    setTaskMessage(t('search.starting'));
     
     try {
-      // 调用真实API，传递国家代码
-      console.log('调用API:', appName, language, selectedCountry);
-      const analysisData = await analyzeAppReviews(appName, 'apple', language, selectedCountry);
-      console.log('API返回数据:', analysisData ? 'success' : 'null');
-      setData(analysisData);
+      // 创建分析任务并获取任务ID
+      const taskId = await createAnalysisTask(appName, 'apple', language, selectedCountry);
+      console.log('任务已创建:', taskId);
+      
+      // 开始轮询任务状态
+      const result = await pollTaskStatus(
+        taskId,
+        (status: TaskStatus) => {
+          // 更新进度
+          console.log('任务进度:', status.progress, status.message);
+          setTaskProgress(status.progress);
+          setTaskMessage(status.message);
+        }
+      );
+      
+      // 处理任务结果
+      console.log('任务完成，收到结果');
+      setData(result);
       
       // 计算实际获取的评论数量
       let actualReviewCount = 0;
-      if (analysisData.reviewsData && Array.isArray(analysisData.reviewsData)) {
-        actualReviewCount = analysisData.reviewsData.length;
+      if (result.reviewsData && Array.isArray(result.reviewsData)) {
+        actualReviewCount = result.reviewsData.length;
         console.log('获取到评论数量:', actualReviewCount);
       }
       setReviewCount(actualReviewCount);
@@ -84,12 +101,12 @@ export default function AppAnalyzer() {
           <div className="mx-auto max-w-xl">
             <div className="mb-2 flex justify-between">
               <span className="text-sm text-gray-600">{t('search.progress')}</span>
-              <span className="text-sm text-gray-600">{t('search.getting_data')}</span>
+              <span className="text-sm text-gray-600">{taskMessage || t('search.getting_data')}</span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
               <div
                 className="h-full bg-primary-500 transition-all duration-150"
-                style={{ width: '30%' }}
+                style={{ width: `${taskProgress}%` }}
               ></div>
             </div>
             <p className="mt-4 text-center text-sm text-gray-600">
