@@ -97,10 +97,10 @@ export default function SearchForm({ onSubmit, isLoading }: SearchFormProps) {
             />
           </div>
           
-          <div className="min-w-fit md:w-48">
+          <div className="min-w-fit md:w-48 relative">
             <select
               id="country"
-              className="block w-full rounded-md border border-gray-300 px-4 py-3 shadow-sm focus:border-primary-500 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
+              className="block w-full appearance-none rounded-md border border-gray-300 bg-white px-4 py-3 pr-8 shadow-sm focus:border-primary-500 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
               value={country}
               onChange={(e) => setCountry(e.target.value)}
               disabled={isLoading}
@@ -111,6 +111,11 @@ export default function SearchForm({ onSubmit, isLoading }: SearchFormProps) {
                 </option>
               ))}
             </select>
+            <div className="pointer-events-none absolute inset-y-0 right-[6px] flex items-center px-1 text-gray-500">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
           </div>
           
           <button
