@@ -26,7 +26,7 @@ globalThis.__taskManager = globalThis.__taskManager || {
 };
 
 // 简单的任务管理器
-export class TaskManager {
+class TaskManager {
   private static instance: TaskManager;
   
   // 获取全局任务存储
@@ -178,7 +178,7 @@ export class TaskManager {
 }
 
 // 导出任务管理器单例
-export const taskManager = TaskManager.getInstance();
+const taskManager = TaskManager.getInstance();
 
 // API路由处理函数
 export async function POST(request: Request) {
@@ -209,4 +209,7 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-} 
+}
+
+// 使用服务器端导出，确保在其他路由文件中可以访问taskManager
+export { taskManager }; 
