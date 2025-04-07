@@ -1688,8 +1688,6 @@ const generateMockAppStoreData = async (appName: string, language: Language): Pr
   };
 };
 
-// 确保getAppStoreData函数被导出，以便任务系统调用
-export { getAppStoreData };
 
 // API路由处理函数
 export async function POST(request: Request) {
