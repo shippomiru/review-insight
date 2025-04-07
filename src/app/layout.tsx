@@ -3,9 +3,13 @@ import type { Metadata } from 'next';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 
 export const metadata: Metadata = {
-  title: '用户反馈趋势分析 - 了解应用评价洞察',
-  description: '分析 App Store 和 Google Play 的用户评论，获取应用评价洞察，了解用户最喜欢和最不满意的功能。',
-  keywords: '应用评价分析, 用户反馈趋势, App Store 评论分析, Google Play 评论分析, 应用市场调研',
+  title: 'AppInsight｜Multi-Platform Review Analyzer - Find Hidden Opportunities',
+  description: 'Analyze app reviews across platforms with AI. Discover top loved/hated features, uncover competitors\' blind spots, and get actionable insights in minutes.',
+  keywords: [],
+  metadataBase: new URL('https://heartheusers.com'),
+  alternates: {
+    canonical: 'https://heartheusers.com',
+  },
 };
 
 export default function RootLayout({
