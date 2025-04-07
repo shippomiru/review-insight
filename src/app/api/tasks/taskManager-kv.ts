@@ -51,12 +51,17 @@ export class TaskManagerKV {
     };
     
     // 存储任务到KV
-    await kv.set(`task:${taskId}`, task);
-    
-    // 将任务ID添加到任务列表中
-    await kv.sadd('task_ids', taskId);
-    
-    console.log(`创建任务: ${taskId}, 应用: ${params.appName}, 语言: ${params.language}, 国家: ${params.country}`);
+    try {
+      await kv.set(`task:${taskId}`, task);
+      console.log(`[KV存储] 成功创建任务: ${taskId}, 应用: ${params.appName}`);
+      
+      // 将任务ID添加到任务列表中
+      await kv.sadd('task_ids', taskId);
+      console.log(`[KV存储] 任务ID已添加到任务列表`);
+    } catch (error) {
+      console.error(`[KV存储] 创建任务失败:`, error);
+      throw error;
+    }
     
     // 启动后台处理（不等待完成）
     this.processTaskInBackground(taskId);
@@ -70,14 +75,16 @@ export class TaskManagerKV {
   // 获取任务状态
   public async getTask(taskId: string): Promise<TaskData | null> {
     try {
+      console.log(`[KV存储] 尝试获取任务: ${taskId}`);
       const task = await kv.get<TaskData>(`task:${taskId}`);
       if (!task) {
-        console.log(`任务未找到: ${taskId}`);
+        console.log(`[KV存储] 任务未找到: ${taskId}`);
         return null;
       }
+      console.log(`[KV存储] 成功获取任务: ${taskId}, 状态: ${task.status}, 进度: ${task.progress}%`);
       return task;
     } catch (error) {
-      console.error(`获取任务失败: ${error}`);
+      console.error(`[KV存储] 获取任务失败:`, error);
       return null;
     }
   }
@@ -96,6 +103,7 @@ export class TaskManagerKV {
   // 更新任务状态
   public async updateTask(taskId: string, update: Partial<TaskData>): Promise<void> {
     try {
+      console.log(`[KV存储] 尝试更新任务: ${taskId}`);
       const task = await kv.get<TaskData>(`task:${taskId}`);
       
       if (task) {
@@ -106,12 +114,12 @@ export class TaskManagerKV {
         };
         
         await kv.set(`task:${taskId}`, updatedTask);
-        console.log(`更新任务: ${taskId}, 进度: ${update.progress || task.progress}%, 消息: ${update.message || task.message}`);
+        console.log(`[KV存储] 更新任务: ${taskId}, 进度: ${update.progress || task.progress}%, 消息: ${update.message || task.message}`);
       } else {
-        console.error(`更新任务失败: 任务 ${taskId} 不存在`);
+        console.error(`[KV存储] 更新任务失败: 任务 ${taskId} 不存在`);
       }
     } catch (error) {
-      console.error(`更新任务失败: ${error}`);
+      console.error(`[KV存储] 更新任务失败:`, error);
     }
   }
   
