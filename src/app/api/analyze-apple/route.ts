@@ -2,6 +2,9 @@ import { Language } from '@/contexts/LanguageContext';
 import { NextResponse } from 'next/server';
 import { createRequire } from 'module';
 
+// 设置评论获取和处理的常量
+const MAX_REVIEWS = 50; // 限制评论数量为50条，避免API超时和保证处理速度
+
 // 创建require函数，用于加载CommonJS模块
 const require = createRequire(import.meta.url);
 
@@ -601,6 +604,8 @@ type AnalysisResult = {
   customReviewExamples?: Record<string, string[]>;
 };
 
+// 设置评论获取的默认参数
+
 // 修改extractFeatures函数以支持进度回调
 const extractFeatures = async (
   reviews: any[],
@@ -619,7 +624,7 @@ const extractFeatures = async (
       };
     })
     .filter((review): review is {text: string; score: number; version: string} => review !== null)
-    .slice(0, 50); // 限制为50条评论以避免API超时和成本过高
+    .slice(0, MAX_REVIEWS); // 限制为50条评论以避免API超时和成本过高
   
   console.log(`准备使用API分析 ${validReviews.length} 条有效评论，从 ${reviews.length} 条原始评论中提取`);
   progressCallback?.(60, `准备分析 ${validReviews.length} 条有效评论`);
@@ -812,84 +817,99 @@ Please return only the JSON data without any other explanatory text.`;
       
       // 使用提供的自定义提示词模板
       const outputLanguage = language === 'zh' ? '中文' : 'English';
-      const customPrompt = `你是一位专业的应用评论分析专家。我需要你分析以下应用评论，提取关键信息，并生成一份结构化的分析报告，用于网页展示。
+      
+      // 构建针对DeepSeek的自定义提示词
+      // 根据所提供的自定义提示词，以所需语言构建完整提示
+      const customPrompt = language === 'zh' ? 
+      `作为一个应用评论分析专家，请从以下用户评论中提取用户提到的具体功能点并分析他们的情感倾向。
+请分析这些评论，找出用户喜欢和不喜欢的功能，并提供每个功能的提及次数和代表性评论。
 
-==== 评论数据开始 ====
+评论内容:
 ${reviewTexts}
-==== 评论数据结束 ====
 
-输出语言: ${outputLanguage}
-
-请完成以下分析任务，并以JSON格式返回结果:
-
-1. 用户喜欢的功能:
-   - 识别最受欢迎的5个具体功能或方面
-   - 提供每个功能的提及次数和最多2条代表性评论示例
-   - 优先选择非常具体的功能，如"视觉化的时间显示"、"桌面小组件"、"自定义提醒音效"等
-   - 评论示例保留原文，不要翻译
-
-2. 用户不喜欢的功能:
-   - 识别最常被投诉的5个功能或问题
-   - 提供每个问题的提及次数和最多2条代表性评论示例
-   - 突出显示具体、可操作的问题，如"登录页面频繁崩溃"、"通知延迟问题"等
-   - 评论示例保留原文，不要翻译
-
-格式要求:
-- 请以JSON格式返回结果
-- 所有分析文本使用指定的语言(${outputLanguage})，但评论示例保留原文
-- 选择的评论示例应代表性强且信息量大，避免过于简短的评论
-- 避免重复信息和过度概括
-- 结果应客观、基于数据，不要添加未在评论中出现的内容
-
-${language === 'zh' ? `示例中文输出格式:
+请用中文回复，并按照以下JSON格式返回分析结果:
 {
   "用户喜欢的功能": [
     {
-      "功能名称": "视觉化的时间显示",
-      "提及次数": xx,
-      "评论示例": ["...", "..."] // 原文评论，不翻译
+      "功能名称": "具体功能名称1",
+      "提及次数": 数字,
+      "评论示例": ["示例评论1", "示例评论2"]
     },
-    ...
+    {
+      "功能名称": "具体功能名称2",
+      "提及次数": 数字,
+      "评论示例": ["示例评论1", "示例评论2"]
+    }
   ],
   "用户不喜欢的功能": [
     {
-      "问题名称": "登录页面频繁崩溃",
-      "提及次数": xx,
-      "评论示例": ["...", "..."] // 原文评论，不翻译
+      "问题名称": "具体问题名称1",
+      "提及次数": 数字,
+      "评论示例": ["示例评论1", "示例评论2"]
     },
-    ...
+    {
+      "问题名称": "具体问题名称2",
+      "提及次数": 数字,
+      "评论示例": ["示例评论1", "示例评论2"]
+    }
   ]
-}` : `示例英文输出格式:
+}
+
+请确保：
+1. 只提取用户真正讨论的具体功能，不要使用宽泛的类别
+2. 每个功能至少有2个代表性评论示例
+3. 只返回JSON数据，不要有其他说明文字
+4. 若某功能没有足够评论，则合并相似功能或减少评论示例数量` 
+      :
+      `As an app review analysis expert, please analyze the following user reviews to extract specific features mentioned and their sentiment.
+Analyze these reviews to identify what features users like and dislike, and provide mention counts and representative reviews for each feature.
+
+Review content:
+${reviewTexts}
+
+Please respond in English and return the analysis in the following JSON format:
 {
   "featuresLiked": [
     {
-      "featureName": "Visual time display",
-      "mentionCount": xx,
-      "reviewExamples": ["...", "..."] // Original reviews, no translation
+      "featureName": "specific feature name 1",
+      "mentionCount": number,
+      "reviewExamples": ["example review 1", "example review 2"]
     },
-    ...
+    {
+      "featureName": "specific feature name 2",
+      "mentionCount": number,
+      "reviewExamples": ["example review 1", "example review 2"]
+    }
   ],
   "featuresDisliked": [
     {
-      "issueName": "Frequent login page crashes",
-      "mentionCount": xx,
-      "reviewExamples": ["...", "..."] // Original reviews, no translation
+      "issueName": "specific issue name 1",
+      "mentionCount": number,
+      "reviewExamples": ["example review 1", "example review 2"]
     },
-    ...
+    {
+      "issueName": "specific issue name 2",
+      "mentionCount": number,
+      "reviewExamples": ["example review 1", "example review 2"]
+    }
   ]
-}`}
+}
 
-请确保分析全面且客观，只返回JSON格式的结果，不要包含其他说明文字。`;
-
+Please ensure:
+1. You extract only specific features users are actually discussing, not broad categories
+2. Each feature has at least 2 representative review examples
+3. Return only the JSON data without any explanatory text
+4. If a feature doesn't have enough reviews, merge similar features or reduce the number of examples`;
+      
       // 创建AbortController用于超时控制
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 300000); // 增加到300秒超时(5分钟)
       
       try {
-        console.log('开始DeepSeek API流式响应请求');
+        console.log('开始DeepSeek API请求 (非流式)');
         progressCallback?.(71, '连接到DeepSeek服务...');
         
-        // 使用流式响应
+        // 使用非流式响应
         const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -902,7 +922,7 @@ ${language === 'zh' ? `示例中文输出格式:
             temperature: 0.2, // 降低温度以获得更确定性的结果
             max_tokens: 4000, // 增加token限制，确保有足够空间输出所有结果
             response_format: { type: "json_object" },
-            stream: true // 启用流式响应
+            stream: false // 禁用流式响应
           }),
           signal: controller.signal // 添加信号用于超时控制
         });
@@ -912,121 +932,43 @@ ${language === 'zh' ? `示例中文输出格式:
           throw new Error(`Deepseek API请求失败: ${response.status} ${errorText}`);
         }
         
-        progressCallback?.(72, '开始接收分析结果...');
-        console.log('开始读取流式响应...');
+        progressCallback?.(80, '正在处理DeepSeek响应...');
+        const result = await response.json();
         
-        if (!response.body) {
-          throw new Error('响应没有提供可读流');
-        }
-
-        // 设置用于存储完整响应的变量
-        let fullContent = '';
-        let fullResponseText = '';
-        let progressCounter = 73;
-        
-        // 创建读取器处理流式响应
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        
-        let done = false;
-        while (!done) {
-          const { value, done: readerDone } = await reader.read();
-          done = readerDone;
-          
-          if (done) break;
-          
-          const chunk = decoder.decode(value, { stream: true });
-          fullResponseText += chunk; // 保存原始响应文本
-          
-          // 实时更新进度条，每接收一些数据就增加进度
-          if (progressCounter < 85) {
-            progressCounter += 1;
-            progressCallback?.(progressCounter, `分析进行中...${progressCounter-70}%`);
-          }
-          
-          // 处理SSE格式的数据行 (data: {...})
-          const lines = chunk.split('\n');
-          for (const line of lines) {
-            if (line.trim().startsWith('data:')) {
-              try {
-                // 提取data:后面的JSON部分
-                const jsonPart = line.trim().substring(5).trim();
-                if (jsonPart === '[DONE]') continue;
-                
-                const parsed = JSON.parse(jsonPart);
-                // 提取内容部分
-                if (parsed.choices && 
-                    parsed.choices[0] && 
-                    parsed.choices[0].delta && 
-                    parsed.choices[0].delta.content) {
-                  fullContent += parsed.choices[0].delta.content;
-                }
-              } catch (e: any) {
-                console.warn('解析流式数据片段失败:', e.message);
-              }
-            }
-          }
-        }
-        
-        // 完成流式接收
-        progressCallback?.(85, '已完成接收，正在处理结果...');
-        console.log('已完成流式响应接收');
-        console.log('累积内容长度:', fullContent.length);
+        console.log('已收到完整响应');
+        let resultJson;
         
         try {
-          // 尝试解析累积的JSON内容
-          let resultJson;
-          
-          if (fullContent.trim()) {
-            // 如果有收集到内容，尝试直接解析
+          // 非流式响应直接从content中提取内容
+          if (result.choices && result.choices[0] && result.choices[0].message && result.choices[0].message.content) {
+            const content = result.choices[0].message.content;
+            console.log('提取到响应内容，长度:', content.length);
+            
             try {
-              // 查找JSON对象的开始和结束
-              const startBrace = fullContent.indexOf('{');
-              const endBrace = fullContent.lastIndexOf('}');
+              // 直接解析JSON响应
+              resultJson = JSON.parse(content);
+              console.log('成功解析DeepSeek的JSON响应');
+            } catch (jsonError) {
+              console.error('解析DeepSeek响应JSON失败:', jsonError);
               
-              if (startBrace !== -1 && endBrace !== -1 && endBrace > startBrace) {
-                const jsonString = fullContent.substring(startBrace, endBrace + 1);
-                console.log('尝试解析JSON，长度:', jsonString.length);
-                resultJson = JSON.parse(jsonString);
-                console.log('成功解析JSON');
+              // 尝试从文本中提取JSON部分
+              const match = content.match(/\{[\s\S]*\}/);
+              if (match && match[0]) {
+                try {
+                  resultJson = JSON.parse(match[0]);
+                  console.log('通过正则提取成功解析JSON');
+                } catch (regexError) {
+                  throw new Error(`无法解析响应内容中的JSON: ${(jsonError as Error).message}`);
+                }
               } else {
-                throw new Error('未找到完整的JSON对象');
+                throw new Error('响应内容中没有找到JSON格式数据');
               }
-            } catch (jsonError: any) {
-              console.error('解析累积内容失败:', jsonError.message);
-              throw jsonError;
             }
           } else {
-            // 如果没有有效的累积内容，尝试从原始响应中提取JSON
-            console.log('没有找到有效的累积内容，尝试从原始响应中提取');
-            
-            // 记录响应的前200个字符，帮助调试
-            console.log('原始响应开头:', fullResponseText.substring(0, 200));
-            
-            // 尝试找到所有JSON对象
-            const jsonMatches = fullResponseText.match(/\{[\s\S]*?\}/g);
-            if (jsonMatches && jsonMatches.length > 0) {
-              // 尝试解析最长的JSON对象
-              let longestJson = '';
-              for (const match of jsonMatches) {
-                if (match.length > longestJson.length) {
-                  longestJson = match;
-                }
-              }
-              
-              try {
-                console.log('尝试解析最长的JSON匹配，长度:', longestJson.length);
-                resultJson = JSON.parse(longestJson);
-                console.log('成功解析JSON');
-              } catch (e: any) {
-                throw new Error(`解析提取的JSON失败: ${e.message}`);
-              }
-            } else {
-              throw new Error('未在响应中找到任何JSON对象');
-            }
+            throw new Error('DeepSeek响应格式不符合预期');
           }
           
-          // 如果没有找到符合预期的JSON结构，可能是API返回了错误信息
+          // 检查是否有预期的数据结构
           if (!resultJson || (
               !resultJson['用户喜欢的功能'] && 
               !resultJson.featuresLiked)) {
@@ -1036,28 +978,8 @@ ${language === 'zh' ? `示例中文输出格式:
               throw new Error(`API返回错误: ${resultJson.error.message || JSON.stringify(resultJson.error)}`);
             }
             
-            // 如果没有找到预期的结构，返回备用数据
-            console.log('未找到预期的JSON结构，使用备用数据');
-            // 简单的示例数据
-            resultJson = language === 'zh' ? {
-              '用户喜欢的功能': [
-                { '功能名称': '流式响应', '提及次数': 5, '评论示例': ['这个功能很棒', '响应速度快'] },
-                { '功能名称': '界面设计', '提及次数': 3, '评论示例': ['界面简洁大方', '设计很人性化'] }
-              ],
-              '用户不喜欢的功能': [
-                { '问题名称': '稳定性问题', '提及次数': 4, '评论示例': ['经常崩溃', '有时候会闪退'] },
-                { '问题名称': '耗电量高', '提及次数': 2, '评论示例': ['电池消耗太快', '后台运行很耗电'] }
-              ]
-            } : {
-              featuresLiked: [
-                { featureName: 'Streaming response', mentionCount: 5, reviewExamples: ['This feature is great', 'Fast response'] },
-                { featureName: 'Interface design', mentionCount: 3, reviewExamples: ['Clean interface', 'User-friendly design'] }
-              ],
-              featuresDisliked: [
-                { issueName: 'Stability issues', mentionCount: 4, reviewExamples: ['Crashes often', 'Sometimes it quits unexpectedly'] },
-                { issueName: 'High battery usage', mentionCount: 2, reviewExamples: ['Battery drains quickly', 'Uses a lot of power in background'] }
-              ]
-            };
+            // 不提供备用数据，直接抛出错误
+            throw new Error('API返回格式无效：未找到预期的JSON结构');
           }
           
           // 将Deepseek分析结果转换为原有格式
@@ -1086,7 +1008,8 @@ ${language === 'zh' ? `示例中文输出格式:
                 customReviewExamples
               };
             }
-          } else {
+          } 
+          else {
             // 英文输出格式转换
             if (resultJson.featuresLiked && resultJson.featuresDisliked) {
               const customReviewExamples: Record<string, string[]> = {};
@@ -1113,11 +1036,15 @@ ${language === 'zh' ? `示例中文输出格式:
             }
           }
           console.log('Deepseek API分析完成');
-          progressCallback?.(86, 'Deepseek分析完成');
+          progressCallback?.(85, 'Deepseek分析完成');
         } catch (error: any) {
           console.error('解析Deepseek响应失败:', error);
           // 记录响应内容的前500个字符，但不要记录太多以防日志过大
-          console.error('响应内容片段:', fullResponseText.substring(0, 500) + '...');
+          if (result.choices && result.choices[0] && result.choices[0].message) {
+            console.error('响应内容片段:', result.choices[0].message.content.substring(0, 500) + '...');
+          } else {
+            console.error('原始响应:', JSON.stringify(result).substring(0, 500) + '...');
+          }
           throw new Error(`解析Deepseek响应失败: ${error.message}`);
         }
       } finally {
@@ -1487,7 +1414,7 @@ export const getAppStoreData = async (
 // 分页获取所有评论，兼顾性能和API限制
 async function fetchAllReviews(appStore: any, appId: string, country: string, progressCallback?: (page: number, total: number, count: number) => void) {
   const allReviews = [];
-  const maxPages = 2; // 最多获取2页，每页约50条，总共约100条评论
+  const maxPages = 1; // 只获取1页，每页约50条评论，总共约50条评论
   
   // 准备随机的请求头选项
   const headers = {
@@ -1513,14 +1440,6 @@ async function fetchAllReviews(appStore: any, appId: string, country: string, pr
       // 限制请求速率
       await rateLimiter.waitIfNeeded();
       
-      // 如果不是第一页，添加更长的随机延迟
-      if (page > 1) {
-        const baseDelay = 3000; // 3秒基础延迟
-        const actualDelay = addJitter(baseDelay, 0.5); // 添加50%的随机抖动
-        console.log(`为减轻API负担，等待 ${Math.round(actualDelay)}ms 后获取下一页...`);
-        await new Promise(resolve => setTimeout(resolve, actualDelay));
-      }
-      
       // 带重试的API请求，添加自定义头信息
       const pageReviews = await fetchWithRetry(() => 
         appStore.reviews({
@@ -1528,7 +1447,7 @@ async function fetchAllReviews(appStore: any, appId: string, country: string, pr
           country: country,
           sort: appStore.sort.RECENT,
           page: page,
-          num: 50, // 每页最多50条
+          num: MAX_REVIEWS, // 只获取最多50条评论
           // 使用自定义请求头
           requestOptions: {
             headers: headers
@@ -1552,23 +1471,10 @@ async function fetchAllReviews(appStore: any, appId: string, country: string, pr
       allReviews.push(...uniqueReviews);
       console.log(`已获取总评论数: ${allReviews.length}，本页新增: ${uniqueReviews.length}`);
       
-      // 如果返回的评论数少于请求的数量，说明已经到达末尾
-      if (pageReviews.length < 50) {
-        console.log('已获取所有可用评论，停止分页');
-        break;
-      }
-      
-      // 如果获取的评论达到了200条，也提前结束
-      if (allReviews.length >= 200) {
-        console.log('已获取200条评论，达到预定上限，停止获取');
-        break;
-      }
-      
-      // 页面间添加随机延迟，避免频繁请求
-      if (page < maxPages) {
-        const delay = addJitter(2500, 0.4); // 基础2.5秒，添加40%的随机抖动
-        console.log(`等待 ${Math.round(delay)}ms 后获取下一页...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+      // 确保只保留前50条评论
+      if (allReviews.length > MAX_REVIEWS) {
+        console.log(`截取前${MAX_REVIEWS}条评论`);
+        allReviews.splice(MAX_REVIEWS);
       }
       
       progressCallback?.(page, maxPages, pageReviews.length);
