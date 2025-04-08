@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { LanguageProvider } from '@/contexts/LanguageContext';
+import Script from 'next/script';
 
 export const metadata: Metadata = {
   title: 'AppInsight｜Multi-Platform Review Analyzer - Find Hidden Opportunities',
@@ -33,16 +34,17 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
-        <!-- Google tag (gtag.js) -->
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-LT32G2KS3S"></script>
-        <script>
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', 'G-LT32G2KS3S');
-        </script>
       </head>
       <body>
+        <Script src="https://www.googletagmanager.com/gtag/js?id=G-LT32G2KS3S" strategy="afterInteractive" />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-LT32G2KS3S');
+          `}
+        </Script>
         <LanguageProvider>
           {children}
         </LanguageProvider>
