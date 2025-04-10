@@ -168,7 +168,7 @@ const translations = {
     // Hero
     'hero.title1': 'Gain\u00A0Insights\u00A0from\u00A0User\u00A0Voices',
     'hero.title2': 'Improve App Experience',
-    'hero.description': 'Analyze App Store and Google Play reviews to discover what users love and dislike about your app, get valuable feedback insights, and make informed product decisions.',
+    'hero.description': 'Analyze app reviews across platforms with AI. Discover what users love and dislike about apps, get valuable feedback insights, and make informed product decisions.',
     
     // App Analyzer
     'search.label': 'App Name',
@@ -299,7 +299,7 @@ const translations = {
 
 // 创建Provider组件
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
-  const [language, setLanguage] = useState<Language>('zh');
+  const [language, setLanguage] = useState<Language>('en');
 
   // 翻译函数
   const t = (key: string, params?: Record<string, string>) => {
