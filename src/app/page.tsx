@@ -113,9 +113,7 @@ export default function Home() {
               </div>
               <div className="order-1 flex justify-center md:order-2">
                 <div className="relative h-64 w-full max-w-sm rounded-lg bg-gray-100 shadow-sm">
-                  <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                    [搜索界面示意图]
-                  </div>
+                  <img src="/images/1.png" alt="Step 1 Image" className="w-full h-full object-cover" />
                 </div>
               </div>
             </div>
@@ -124,9 +122,7 @@ export default function Home() {
             <div className="grid items-center gap-8 md:grid-cols-2">
               <div className="flex justify-center">
                 <div className="relative h-64 w-full max-w-sm rounded-lg bg-gray-100 shadow-sm">
-                  <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                    [分析过程示意图]
-                  </div>
+                  <img src="/images/2.png" alt="Step 2 Image" className="w-full h-full object-cover" />
                 </div>
               </div>
               <div>
@@ -157,9 +153,7 @@ export default function Home() {
               </div>
               <div className="order-1 flex justify-center md:order-2">
                 <div className="relative h-64 w-full max-w-sm rounded-lg bg-gray-100 shadow-sm">
-                  <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                    [分析结果示意图]
-                  </div>
+                  <img src="/images/3.png" alt="Step 3 Image" className="w-full h-full object-cover" />
                 </div>
               </div>
             </div>
@@ -181,16 +175,9 @@ export default function Home() {
           <div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             {/* Testimonial 1 */}
             <div className="rounded-lg bg-white p-8 shadow-sm">
-              <div className="flex items-center">
-                <div className="h-12 w-12 overflow-hidden rounded-full bg-gray-200">
-                  <div className="flex h-full w-full items-center justify-center text-gray-400">
-                    头像
-                  </div>
-                </div>
-                <div className="ml-4">
-                  <h4 className="text-lg font-medium text-gray-900">{t('testimonials.person1.name')}</h4>
-                  <p className="text-sm text-gray-600">{t('testimonials.person1.position')}</p>
-                </div>
+              <div className="text-left">
+                <h4 className="text-lg font-medium text-gray-900">{t('testimonials.person1.name')}</h4>
+                <p className="text-sm text-gray-600">{t('testimonials.person1.position')}</p>
               </div>
               <div className="mt-6">
                 <p className="text-gray-600">
@@ -201,16 +188,9 @@ export default function Home() {
             
             {/* Testimonial 2 */}
             <div className="rounded-lg bg-white p-8 shadow-sm">
-              <div className="flex items-center">
-                <div className="h-12 w-12 overflow-hidden rounded-full bg-gray-200">
-                  <div className="flex h-full w-full items-center justify-center text-gray-400">
-                    头像
-                  </div>
-                </div>
-                <div className="ml-4">
-                  <h4 className="text-lg font-medium text-gray-900">{t('testimonials.person2.name')}</h4>
-                  <p className="text-sm text-gray-600">{t('testimonials.person2.position')}</p>
-                </div>
+              <div className="text-left">
+                <h4 className="text-lg font-medium text-gray-900">{t('testimonials.person2.name')}</h4>
+                <p className="text-sm text-gray-600">{t('testimonials.person2.position')}</p>
               </div>
               <div className="mt-6">
                 <p className="text-gray-600">
@@ -221,16 +201,9 @@ export default function Home() {
             
             {/* Testimonial 3 */}
             <div className="rounded-lg bg-white p-8 shadow-sm">
-              <div className="flex items-center">
-                <div className="h-12 w-12 overflow-hidden rounded-full bg-gray-200">
-                  <div className="flex h-full w-full items-center justify-center text-gray-400">
-                    头像
-                  </div>
-                </div>
-                <div className="ml-4">
-                  <h4 className="text-lg font-medium text-gray-900">{t('testimonials.person3.name')}</h4>
-                  <p className="text-sm text-gray-600">{t('testimonials.person3.position')}</p>
-                </div>
+              <div className="text-left">
+                <h4 className="text-lg font-medium text-gray-900">{t('testimonials.person3.name')}</h4>
+                <p className="text-sm text-gray-600">{t('testimonials.person3.position')}</p>
               </div>
               <div className="mt-6">
                 <p className="text-gray-600">
